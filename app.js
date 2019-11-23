@@ -1,0 +1,142 @@
+//use path module
+const path = require('path');
+//use express module
+const express = require('express');
+//use hbs view engine
+const hbs = require('hbs');
+//use bodyParser middleware
+const bodyParser = require('body-parser');
+//use mysql database
+const mysql = require('mysql');
+const app = express();
+ 
+//Create conn
+const conn = mysql.createConnection({
+  host: 'localhost',
+  user: 'karinakylle',
+  password: 'Karinaang5199!',
+  database: 'AngK'
+});
+ 
+//connect to database
+conn.connect((err) =>{
+  if(err) throw err;
+  console.log('Mysql Connected...');
+});
+ 
+//set views file
+app.set('views',path.join(__dirname,'views'));
+//set view engine
+app.set('view engine', 'hbs');
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: false }));
+//set public folder as static folder for static file
+//app.use('/assets',express.static(__dirname + '/public'));
+ 
+//route for list of applications
+app.get('/list',(req, res) => {
+  let sql = "SELECT TIN, Physical_ID, Full_Name, Gender, Employer_Name, Blood_Type FROM TIN_Details NATURAL JOIN ApplicationForm NATURAL JOIN Employer NATURAL JOIN Physical_Details";
+  let query = conn.query(sql, (err, results) => {
+    if(err) throw err;
+    res.send(results);
+    console.log(results);
+  });
+});
+ 
+//route for create
+app.post('/apply',(req, res) => {
+//   let data = {product_name: req.body.product_name, product_price: req.body.product_price};
+//   let sql = "INSERT INTO product SET ?";
+//   let query = conn.query(sql, data,(err, results) => {
+//     if(err) throw err;
+//     res.redirect('/');
+//   });
+// });
+
+	conn.beginTransaction(async (err) => {
+	  if (err) { throw err; }
+	  var appFormData = {};
+
+	  let data ={TIN : req.body.tin , Full_Name : req.body.full_name, Present_Add : req.body.present_add, Gender : req.body.gender, Birth_Date : req.body.birth_date, TelCP_No: req.body.telcp_no, Birth_Place : req.body.birth_place, Nationality : req.body.nationality, Signature: req.body.signature, EA: req.body.ea, Father_Name: req.body.father_name, Mother_Name: req.body.mother_name, Spouse_Name: req.body.spouse_name, Civil_Status: req.body.civil_status};
+	  await conn.query('INSERT INTO TIN_Details SET ?', data, (err, results, fields) => {
+	    if (err) {
+	      return conn.rollback(() => {
+	        throw err;
+	      });
+	    }
+	    console.log("TIN SUCCESS");
+	  });
+
+	  let sql = "SELECT Employer_Name FROM Employer WHERE Employer_Name=?";
+	  data = {Employer_Name : req.body.employer_name};
+
+	  let query = await conn.query(sql, data, async (err, results) => {
+	  	if(err) throw err;
+	  	if(!results) {
+	  		let data = {Employer_Name: req.body.employer_name, Employer_No : req.body.employer_no, Employer_Add : req.body.employer_add};
+			  await conn.query('INSERT INTO Employer SET ?', data, (err, results, fields) => {
+			    if (err) {
+			      return conn.rollback(() => {
+			        throw err;
+			      });
+			    }
+			    console.log("Employer SUCCESS");
+			 	});
+	  	}
+	 });
+	//console.log({inserted_physicalID});
+	console.log({appFormData})
+  data = {Blood_Type : req.body.blood_type , Hair : req.body.hair , Eyes : req.body.eyes , Complx : req.body.complx , Height : req.body.height , Weight : req.body.weight, Built : req.body.built};
+  await conn.query('INSERT INTO Physical_Details SET ?', data, (err, results, fields) => {
+    if (err) {
+      return conn.rollback(() => {
+        throw err;
+      });
+    }
+    console.log("PHYSICAL SUCCESS");
+    let x = results.insertId
+    appFormData = {TIN : req.body.tin, Employer_Name : req.body.employer_name, Physical_ID : x};
+	  conn.query('INSERT INTO ApplicationForm SET ?', appFormData, (err, results, fields) => {
+	    if (err) {
+	      return conn.rollback(() => {
+	        throw err;
+	      });
+	    }
+	    console.log("APP FORM SUCCESS");
+	    conn.commit((err) => {
+	      if (err) {
+	        return conn.rollback(() => {
+	          throw err;
+	        });
+	        console.log("COMMIT SUCCESS");
+	        res.redirect('/list');
+	      }
+	    });
+	  });
+  });
+});
+});
+
+
+// //route for update data
+// app.post('/update',(req, res) => {
+//   let sql = "UPDATE product SET product_name='"+req.body.product_name+"', product_price='"+req.body.product_price+"' WHERE product_id="+req.body.id;
+//   let query = conn.query(sql, (err, results) => {
+//     if(err) throw err;
+//     res.redirect('/');
+//   });
+// });
+ 
+// //route for delete data
+// app.post('/delete',(req, res) => {
+//   let sql = "DELETE FROM product WHERE product_id="+req.body.product_id+"";
+//   let query = conn.query(sql, (err, results) => {
+//     if(err) throw err;
+//       res.redirect('/');
+//   });
+// });
+ 
+//server listening
+app.listen(8000, () => {
+  console.log('Server is running at port 8000');
+});
