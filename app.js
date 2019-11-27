@@ -89,12 +89,12 @@ app.post('/apply',(req, res) => {
 	    }
 	  });
 
-	  let sql = "SELECT Employer_Name FROM Employer WHERE Employer_Name=?";
+	  let sql = "SELECT Employer_Name FROM Employer WHERE ?";
 	  data = {Employer_Name : req.body.employer_name};
 
 	  let query = await conn.query(sql, data, async (err, results) => {
 	  	if(err) throw err;
-	  	if(!results) {
+	  	if(!results.length) {
 	  		let data = {Employer_Name: req.body.employer_name, Employer_No : req.body.employer_no, Employer_Add : req.body.employer_add};
 			  await conn.query('INSERT INTO Employer SET ?', data, (err, results, fields) => {
 			    if (err) {
@@ -158,37 +158,77 @@ app.post('/apply',(req, res) => {
 
 
 //route for updating an application
- // app.post('/update/:app_number',(req, res) => {
- // 		conn.beginTransaction(async (err) => {
-	//   if (err) { throw err; }
-	//   var appFormData = {};
+ app.post('/update/:app_number',(req, res) => {
+ 		conn.beginTransaction(async (err) => {
+	  if (err) { throw err; }
+	  var appFormData = null;
 
-	//   let data = {App_Number: req.params.app_number}
-	//   await conn.query('SELECT * FROM ApplicationForm WHERE ?', data, (err, results, fields) => {
-	//     if (err) {
-	//       return conn.rollback(() => {
-	//         throw err;
-	//       });
-	//     }
-	// 	  let sql = "UPDATE TIN_Details SET ? WHERE TIN =" + results[0].TIN;
-	// 	  data ={TIN : req.body.tin , Full_Name : req.body.full_name, Present_Add : req.body.present_add, Gender : req.body.gender, Birth_Date : req.body.birth_date, TelCP_No: req.body.telcp_no, Birth_Place : req.body.birth_place, Nationality : req.body.nationality, Signature: req.body.signature, EA: req.body.ea, Father_Name: req.body.father_name, Mother_Name: req.body.mother_name, Spouse_Name: req.body.spouse_name, Civil_Status: req.body.civil_status};
-	// 	  let query = await conn.query(sql, data, async (err, results) => {
-	// 	    if (err) {
-	// 	      return conn.rollback(() => {
-	// 	        throw err;
-	// 	      });
-	// 	    }
+	  let data = {App_Number: req.params.app_number}
+	  await conn.query('SELECT * FROM ApplicationForm WHERE ?', data, async (err, results, fields) => {
+	    if (err) {
+	      return conn.rollback(() => {
+	        throw err;
+	      });
+	    }
+	    appFormData = results[0];
+		  let sql = "UPDATE TIN_Details SET ? WHERE TIN ='" + appFormData.TIN+"'";
+		  data ={TIN : req.body.tin , Full_Name : req.body.full_name, Present_Add : req.body.present_add, Gender : req.body.gender, Birth_Date : req.body.birth_date, TelCP_No: req.body.telcp_no, Birth_Place : req.body.birth_place, Nationality : req.body.nationality, Signature: req.body.signature, EA: req.body.ea, Father_Name: req.body.father_name, Mother_Name: req.body.mother_name, Spouse_Name: req.body.spouse_name, Civil_Status: req.body.civil_status};
+		  let query = await conn.query(sql, data, async (err, results) => {
+		    if (err) {
+		      return conn.rollback(() => {
+		        throw err;
+		      });
+		    }
 
-	// 	  sql = "UPDATE Physical_Details SET ? WHERE Physical_ID =" + results[0].Physical_ID;
-	// 	  data = {Blood_Type: req.body.blood_type, Hair: req.body.hair, Eyes: req.body.eyes, Complx: req.body.complx, Height: req.body.height, Weight: req.body.weight, Built: req.body.built};
-	// 	  query = await conn.query(sql, data, async (err, results) => {
-	// 	    if (err) {
-	// 	      return conn.rollback(() => {
-	// 	        throw err;
-	// 	      });
-	// 	    }
-	//   });
-	// });
+		  sql = "UPDATE Physical_Details SET ? WHERE Physical_ID ='" + appFormData.Physical_ID+ "'";
+		  data = {Blood_Type: req.body.blood_type, Hair: req.body.hair, Eyes: req.body.eyes, Complx: req.body.complx, Height: req.body.height, Weight: req.body.weight, Built: req.body.built};
+		  query = await conn.query(sql, data, async (err, results) => {
+		    if (err) {
+		      return conn.rollback(() => {
+		        throw err;
+		      });
+		    }
+	  });
+		console.log({appFormData})
+	  sql = "SELECT Employer_Name FROM Employer WHERE ?";
+	  data = {Employer_Name : appFormData.Employer_Name};
+
+	  query = await conn.query(sql, data, async (err, results) => {
+	  	if(err) throw err;
+	  	if(!results.length) {
+	  		data = {Employer_Name: req.body.employer_name, Employer_No : req.body.employer_no, Employer_Add : req.body.employer_add};
+			  await conn.query('INSERT INTO Employer SET ?', data, (err, results, fields) => {
+			    if (err) {
+			      return conn.rollback(() => {
+			        throw err;
+			      });
+			    }
+			 	});
+	  	}	
+	  	console.log({results});
+		  sql = "UPDATE ApplicationForm SET ? WHERE App_Number ='" + req.params.app_number + "'";
+		  data = {Employer_Name: req.body.employer_name};
+		  query = await conn.query(sql, data, async (err, results) => {
+		    if (err) {
+		      return conn.rollback(() => {
+		        throw err;
+		      });
+		    }
+		    conn.commit((err) => {
+		      if (err) {
+		        return conn.rollback(() => {
+		          throw err;
+		        });
+		      }
+		      res.redirect('/list');
+		    });
+	  });
+	});
+	});
+	});
+	});
+ 	});
+
 
 
 
