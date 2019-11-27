@@ -127,8 +127,8 @@ app.post('/apply',(req, res) => {
 	        return conn.rollback(() => {
 	          throw err;
 	        });
-	        res.redirect('/list');
 	      }
+	      res.redirect('/list');
 	    });
 	  });
   });
@@ -158,37 +158,37 @@ app.post('/apply',(req, res) => {
 
 
 //route for updating an application
- app.post('/update/:app_number',(req, res) => {
- 		conn.beginTransaction(async (err) => {
-	  if (err) { throw err; }
-	  var appFormData = {};
+ // app.post('/update/:app_number',(req, res) => {
+ // 		conn.beginTransaction(async (err) => {
+	//   if (err) { throw err; }
+	//   var appFormData = {};
 
-	  let data = {App_Number: req.params.app_number}
-	  await conn.query('SELECT * FROM ApplicationForm WHERE ?', data, (err, results, fields) => {
-	    if (err) {
-	      return conn.rollback(() => {
-	        throw err;
-	      });
-	    }
-		  let sql = "UPDATE TIN_Details SET ? WHERE TIN =" + results[0].TIN;
-		  data ={TIN : req.body.tin , Full_Name : req.body.full_name, Present_Add : req.body.present_add, Gender : req.body.gender, Birth_Date : req.body.birth_date, TelCP_No: req.body.telcp_no, Birth_Place : req.body.birth_place, Nationality : req.body.nationality, Signature: req.body.signature, EA: req.body.ea, Father_Name: req.body.father_name, Mother_Name: req.body.mother_name, Spouse_Name: req.body.spouse_name, Civil_Status: req.body.civil_status};
-		  let query = await conn.query(sql, data, async (err, results) => {
-		    if (err) {
-		      return conn.rollback(() => {
-		        throw err;
-		      });
-		    }
+	//   let data = {App_Number: req.params.app_number}
+	//   await conn.query('SELECT * FROM ApplicationForm WHERE ?', data, (err, results, fields) => {
+	//     if (err) {
+	//       return conn.rollback(() => {
+	//         throw err;
+	//       });
+	//     }
+	// 	  let sql = "UPDATE TIN_Details SET ? WHERE TIN =" + results[0].TIN;
+	// 	  data ={TIN : req.body.tin , Full_Name : req.body.full_name, Present_Add : req.body.present_add, Gender : req.body.gender, Birth_Date : req.body.birth_date, TelCP_No: req.body.telcp_no, Birth_Place : req.body.birth_place, Nationality : req.body.nationality, Signature: req.body.signature, EA: req.body.ea, Father_Name: req.body.father_name, Mother_Name: req.body.mother_name, Spouse_Name: req.body.spouse_name, Civil_Status: req.body.civil_status};
+	// 	  let query = await conn.query(sql, data, async (err, results) => {
+	// 	    if (err) {
+	// 	      return conn.rollback(() => {
+	// 	        throw err;
+	// 	      });
+	// 	    }
 
-		  sql = "UPDATE Physical_Details SET ? WHERE Physical_ID =" + results[0].Physical_ID;
-		  data = {Blood_Type: req.body.blood_type, Hair: req.body.hair, Eyes: req.body.eyes, Complx: req.body.complx, Height: req.body.height, Weight: req.body.weight, Built: req.body.built};
-		  query = await conn.query(sql, data, async (err, results) => {
-		    if (err) {
-		      return conn.rollback(() => {
-		        throw err;
-		      });
-		    }
-	  });
-	});
+	// 	  sql = "UPDATE Physical_Details SET ? WHERE Physical_ID =" + results[0].Physical_ID;
+	// 	  data = {Blood_Type: req.body.blood_type, Hair: req.body.hair, Eyes: req.body.eyes, Complx: req.body.complx, Height: req.body.height, Weight: req.body.weight, Built: req.body.built};
+	// 	  query = await conn.query(sql, data, async (err, results) => {
+	// 	    if (err) {
+	// 	      return conn.rollback(() => {
+	// 	        throw err;
+	// 	      });
+	// 	    }
+	//   });
+	// });
 
 
 
@@ -204,18 +204,20 @@ app.post('/apply',(req, res) => {
 
 
 //route for deleting an application
-app.post('/delete/:app_number',(req, res) => {
+app.post('/delete/:app_number', async (req, res) => {
 	conn.beginTransaction(async (err) => {
 	  if (err) { throw err; }
 	  let data = {App_Number: req.params.app_number}
-	  await conn.query('SELECT * FROM ApplicationForm WHERE ?', data, (err, results, fields) => {
+	  await conn.query('SELECT * FROM ApplicationForm WHERE ?', data, async (err, results, fields) => {
 	    if (err) {
 	      return conn.rollback(() => {
 	        throw err;
 	      });
 	    }
+	    var appFormData = results[0];
+	    console.log(appFormData.TIN);
 		  let sql = "DELETE FROM Physical_Details WHERE ?";
-		  data = {Physical_ID : results[0].Physical_ID};
+		  data = {Physical_ID : appFormData.Physical_ID};
 		  let query = await conn.query(sql, data, async (err, results) => {
 		    if (err) {
 		      return conn.rollback(() => {
@@ -224,7 +226,7 @@ app.post('/delete/:app_number',(req, res) => {
 		    }
 
 		  sql = "DELETE FROM TIN_Details WHERE ?";
-		  data = {TIN : results[0].TIN};
+		  data = {TIN : appFormData.TIN};
 		  query = await conn.query(sql, data, async (err, results) => {
 		    if (err) {
 		      return conn.rollback(() => {
@@ -232,18 +234,30 @@ app.post('/delete/:app_number',(req, res) => {
 		      });
 		    }
 
-		  sql = "DELETE FROM ApplicationForm WHERE TIN ="  + results[0].TIN + "AND Physical_ID=" + results[0].Physical_ID;
-		  data = {TIN : results[0].TIN, Physical_ID : results[0].Physical_ID};
-		  query = await conn.query(sql, data, async (err, results) => {
+		  sql = "DELETE FROM ApplicationForm WHERE TIN ='"  + appFormData.TIN + "'AND Physical_ID='" + appFormData.Physical_ID + "'";
+		  //data = {TIN : appFormData.TIN, Physical_ID : appFormData.Physical_ID};
+		  query = await conn.query(sql, async (err, results) => {
 		    if (err) {
 		      return conn.rollback(() => {
 		        throw err;
 		      });
 		    }
+
+	    conn.commit((err) => {
+	      if (err) {
+	        return conn.rollback(() => {
+	          throw err;
+	        });
+	      }
+	      res.redirect('/list');
+	    });
 		 });
 	  });
 	});
 });
+	  });
+	});
+
  
 //server listening
 app.listen(8000, () => {
